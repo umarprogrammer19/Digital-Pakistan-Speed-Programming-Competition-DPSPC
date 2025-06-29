@@ -1,7 +1,7 @@
 import sys
-import heapq
 
 INF = int(1e9)
+
 def floyd_warshall(n, dist):
     for k in range(n):
         for i in range(n):
@@ -37,26 +37,33 @@ def is_possible(n, k, dist, D):
 
     return len(covered) == n
 
-def CVCP():
+def main():
+    input = sys.stdin.readline
     n, m, k = map(int, input().split())
     dist = [[INF] * n for _ in range(n)]
     for i in range(n):
         dist[i][i] = 0
     for _ in range(m):
         u, v, w = map(int, input().split())
+        u -= 1
+        v -= 1
         dist[u][v] = min(dist[u][v], w)
         dist[v][u] = min(dist[v][u], w)
 
     floyd_warshall(n, dist)
+
     low, high = 0, 10000 * n
-    answer = high
+    ans = high
 
     while low <= high:
         mid = (low + high) // 2
         if is_possible(n, k, dist, mid):
-            answer = mid
+            ans = mid
             high = mid - 1
         else:
             low = mid + 1
-    print(answer)
-CVCP()
+
+    print(ans)
+
+if __name__ == "__main__":
+    main()
