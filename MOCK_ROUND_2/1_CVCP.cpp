@@ -1,113 +1,109 @@
 #include <iostream>
 #include <vector>
-#include <set>
+#include <climits>
 #include <algorithm>
+#include <set>
 
 using namespace std;
-const int MAX_COST = 1e9;
 
-void computeAllPairsShortestPath(int nodes, vector<vector<int>> &costMatrix)
+const int INF = INT_MAX;
+void floyd_warshall(int n, vector<vector<int>> &dist)
 {
-    for (int mid = 0; mid < nodes; ++mid)
+    for (int k = 0; k < n; ++k)
     {
-        for (int src = 0; src < nodes; ++src)
+        for (int i = 0; i < n; ++i)
         {
-            for (int dest = 0; dest < nodes; ++dest)
+            for (int j = 0; j < n; ++j)
             {
-                if (costMatrix[src][mid] + costMatrix[mid][dest] < costMatrix[src][dest])
+                if (dist[i][k] != INF && dist[k][j] != INF && dist[i][k] + dist[k][j] < dist[i][j])
                 {
-                    costMatrix[src][dest] = costMatrix[src][mid] + costMatrix[mid][dest];
+                    dist[i][j] = dist[i][k] + dist[k][j];
                 }
             }
         }
     }
 }
-bool canPlaceCenters(int cities, int centers, const vector<vector<int>> &costMatrix, int maxRange)
+bool is_possible(int n, int k, const vector<vector<int>> &dist, int D)
 {
-    vector<set<int>> reachable(cities);
-    for (int from = 0; from < cities; ++from)
+    vector<set<int>> cover_sets(n);
+    for (int i = 0; i < n; ++i)
     {
-        for (int to = 0; to < cities; ++to)
+        for (int j = 0; j < n; ++j)
         {
-            if (costMatrix[from][to] <= maxRange)
+            if (dist[i][j] <= D)
             {
-                reachable[from].insert(to);
+                cover_sets[i].insert(j);
             }
         }
     }
-
-    set<int> vaccinated;
-    vector<bool> centerUsed(cities, false);
-
-    for (int i = 0; i < centers; ++i)
+    set<int> covered;
+    vector<bool> used(n, false);
+    for (int _ = 0; _ < k; ++_)
     {
-        int optimalCity = -1;
-        int maxCover = -1;
-
-        for (int j = 0; j < cities; ++j)
+        int best = -1;
+        int max_new_covered = -1;
+        for (int i = 0; i < n; ++i)
         {
-            if (centerUsed[j])
+            if (used[i])
+            {
                 continue;
-
-            int newCoverage = 0;
-            for (int town : reachable[j])
+            }
+            int new_covered = 0;
+            for (int j : cover_sets[i])
             {
-                if (!vaccinated.count(town))
+                if (covered.find(j) == covered.end())
                 {
-                    ++newCoverage;
+                    new_covered++;
                 }
             }
-
-            if (newCoverage > maxCover)
+            if (new_covered > max_new_covered)
             {
-                maxCover = newCoverage;
-                optimalCity = j;
+                max_new_covered = new_covered;
+                best = i;
             }
         }
-
-        if (optimalCity == -1)
-            break;
-
-        centerUsed[optimalCity] = true;
-        for (int town : reachable[optimalCity])
+        if (best == -1)
         {
-            vaccinated.insert(town);
+            break;
         }
+        used[best] = true;
+        covered.insert(cover_sets[best].begin(), cover_sets[best].end());
     }
-
-    return vaccinated.size() == cities;
+    return covered.size() == n;
 }
 
-void solveVaccinationProblem()
+int main()
 {
-    int cityCount, roadCount, vaccineCenters;
-    cin >> cityCount >> roadCount >> vaccineCenters;
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
 
-    vector<vector<int>> cost(cityCount, vector<int>(cityCount, MAX_COST));
-
-    for (int i = 0; i < cityCount; ++i)
+    int n, m, k;
+    cin >> n >> m >> k;
+    vector<vector<int>> dist(n, vector<int>(n, INF));
+    for (int i = 0; i < n; ++i)
     {
-        cost[i][i] = 0;
+        dist[i][i] = 0;
+    }
+    for (int i = 0; i < m; ++i)
+    {
+        int u, v, w;
+        cin >> u >> v >> w;
+        u--;
+        v--;
+        dist[u][v] = min(dist[u][v], w);
+        dist[v][u] = min(dist[v][u], w);
     }
 
-    for (int i = 0; i < roadCount; ++i)
-    {
-        int u, v, c;
-        cin >> u >> v >> c;
-        cost[u][v] = min(cost[u][v], c);
-        cost[v][u] = min(cost[v][u], c);
-    }
+    floyd_warshall(n, dist);
 
-    computeAllPairsShortestPath(cityCount, cost);
-
-    int low = 0, high = 10000 * cityCount, bestDistance = high;
-
+    int low = 0, high = 10000 * n;
+    int ans = high;
     while (low <= high)
     {
         int mid = (low + high) / 2;
-        if (canPlaceCenters(cityCount, vaccineCenters, cost, mid))
+        if (is_possible(n, k, dist, mid))
         {
-            bestDistance = mid;
+            ans = mid;
             high = mid - 1;
         }
         else
@@ -115,14 +111,6 @@ void solveVaccinationProblem()
             low = mid + 1;
         }
     }
-
-    cout << bestDistance << endl;
-}
-int main()
-{
-    ios::sync_with_stdio(false);
-    cin.tie(nullptr);
-
-    solveVaccinationProblem();
+    cout << ans << endl;
     return 0;
 }
